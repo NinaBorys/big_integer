@@ -148,8 +148,7 @@ class Big_Int(object):
                 zero_index = e
                 break
 
-        if zero_index!=0:
-            mul_s_res=mul_s_res[:zero_index+1]
+        mul_s_res=mul_s_res[:zero_index+1]
 
         return mul_s_res
 
@@ -175,25 +174,6 @@ class Big_Int(object):
 
     def multiplication_karatsuba(self, arr, brr):
         mul_k_res=[]
-
-        # zero_index_a=0
-        # zero_index_b=0
-        # for e in range(len(arr)-1,-1,-1):
-        #     if arr[e] != 0:
-        #         zero_index_a = e
-        #         break 
-
-        # for e in range(len(brr)-1,-1,-1):
-        #     if brr[e] != 0:
-        #         zero_index_b = e
-        #         break
-
-        
-        # if zero_index_a!=0:
-        #     arr=arr[:zero_index_a+1]
-        # if zero_index_b!=0:
-        #     brr=brr[:zero_index_b+1]
-
                 
         if len(arr)==1 and len(brr)!=1:
             mul_k_res=self.mult_on_cell(brr,arr[0])
@@ -237,11 +217,12 @@ class Big_Int(object):
             sum_of_arr1_arr0=self.addittion(arr_1, arr_0)   #a1+a0
             sum_of_brr1_brr0=self.addittion(brr_0 ,brr_1)   #b0+b1
 
-            
-            mul_of_sum_of_parts=self.multiplication_karatsuba(sum_of_arr1_arr0,sum_of_brr1_brr0)    #(a1+a0)(b1+b0)
 
-            arr1_on_brr1=self.multiplication_karatsuba(arr_1,brr_1) #a1*b1
-            arr0_on_brr0=self.multiplication_karatsuba(arr_0,brr_0) #a0*b0
+            mul_of_sum_of_parts=self.multiplication_simple(sum_of_arr1_arr0,sum_of_brr1_brr0)    #(a1+a0)(b1+b0)
+
+            arr1_on_brr1=self.multiplication_simple(arr_1,brr_1) #a1*b1
+            arr0_on_brr0=self.multiplication_simple(arr_0,brr_0) #a0*b0
+
 
             sum_of_arr1_on_brr1_and_arr0_on_brr0=self.addittion(arr0_on_brr0, arr1_on_brr1)     #a1*b1+a0*b0 
 
@@ -272,6 +253,91 @@ class Big_Int(object):
             mul_k_res[:zero_index+1]
 
         return mul_k_res
+
+    def multiplication_karatsuba_mod_n(self, arr, brr, n):
+        mul_k_res=[]
+                
+        if len(arr)==1 and len(brr)!=1:
+            mul_k_res=self.mult_on_cell(brr,arr[0])
+
+        elif len(brr)==1 and len(arr)!=1:
+            mul_k_res=self.mult_on_cell(arr,brr[0])
+            
+        elif len(brr)==1 and len(arr)==1:
+            mul_k_res.append(arr[0]*brr[0])
+            mul_k_res=self.normalize(mul_k_res)
+
+        else: 
+
+            if len(arr)>len(brr):
+                for j in range(0,len(arr)-len(brr),1):
+                    brr.insert(0,0)
+            elif len(brr)>len(arr):
+                for j in range(0,len(brr)-len(arr),1):
+                    arr.insert(0,0)
+
+            arr_0=[]
+            arr_1=[]
+
+            brr_0=[]
+            brr_1=[]
+
+
+
+            k=int((len(arr)+1)/2)
+            
+            for i in range(0,k,1):
+                arr_0.append(arr[i])
+            for i in range(k,len(arr),1):
+                arr_1.append(arr[i])
+
+            for i in range(0,k,1):
+                brr_0.append(brr[i])
+            for i in range(k,len(brr),1):
+                brr_1.append(brr[i])
+
+            sum_of_arr1_arr0=self.addittion(arr_1, arr_0)   #a1+a0
+            sum_of_brr1_brr0=self.addittion(brr_0 ,brr_1)   #b0+b1
+
+
+            mul_of_sum_of_parts=self.multiplication_simple(sum_of_arr1_arr0,sum_of_brr1_brr0)    #(a1+a0)(b1+b0)
+
+            arr1_on_brr1=self.multiplication_simple(arr_1,brr_1) #a1*b1
+            arr0_on_brr0=self.multiplication_simple(arr_0,brr_0) #a0*b0
+
+
+            sum_of_arr1_on_brr1_and_arr0_on_brr0=self.addittion(arr0_on_brr0, arr1_on_brr1)     #a1*b1+a0*b0 
+
+            part_on_base_k=self.substraction(mul_of_sum_of_parts, sum_of_arr1_on_brr1_and_arr0_on_brr0)     #(a1+a0)(b1+b0)-(a1*b1+a0*b0)
+            
+            part_on_base_2k=arr1_on_brr1
+            
+            for i in range(0,k,1):
+                part_on_base_k.insert(0,0)
+
+            for i in range(0,2*k,1):
+                part_on_base_2k.insert(0,0)
+
+            temp_sum=self.addittion(part_on_base_2k,part_on_base_k)        
+
+
+            mul_k_res=self.addittion(temp_sum, arr0_on_brr0)
+
+
+        zero_index=0
+        for e in range(len(mul_k_res)-1,-1,-1):
+            if mul_k_res[e]!= 0:
+                zero_index = e
+                break
+
+   
+        if zero_index!=0:
+            mul_k_res[:zero_index+1]
+
+        mul_k_res=self.Barretts_module(mul_k_res, n)
+
+        return mul_k_res
+
 
 
     def power(self, arr, n):
@@ -433,28 +499,38 @@ class Big_Int(object):
         arr=arr[::-1]
         brr=brr[::-1]
         t=self.High_Bit(brr)
+        # print (t)
         q=[0]
 
         while (self.first_more_than_second(arr,brr)):
+            # print('begin with ', arr,brr)
             k=self.High_Bit(arr)
+            # print (k)
             c=brr
             c=self.shift_left(c,(k-t))
-            while (self.first_more_than_second(c,arr)):
+            # print(self.first_more_than_second(c,arr), k ,t)
+            while (self.first_more_than_second(c,arr) and (k-1-t)>=0):
+                # print('hereee', c, arr)
                 k=k-1
                 c=self.shift_right(c,1)
                   
             temp=[1]
+            # print(k-t)
             temp=self.shift_left(temp,(k-t))
             q=self.addition_stright(q, temp)
             arr=self.substraction_stright(arr,c)
 
         r=arr   
         r=r[::-1]
-        print(r)
+        # print(r)
         return r
 
 
     def Barretts_module(self, x,n):
+
+        if (len(x)<=3):
+            return self.remainder_simple(x, n)
+
         r=[]
 
 
@@ -462,8 +538,9 @@ class Big_Int(object):
         k=int(len(x)/2)
 
         mu=self.division(self.Gorners_power(b, self.transform(hex(2*k)[2::]))  , n) #GP!!   2*k -try
-        # print(x, b,len(x), k,(k-1), hex(k-1), self.Gorners_power(b, self.transform(hex(k-1) [2::] ) ))
+        #print(x, b,len(x), k,(k-1), hex(k-1), self.Gorners_power(b, self.transform(hex(k-1) [2::] ) ))
 
+        #print(x, self.Gorners_power(b, self.transform(hex(k-1)[2::] ) ) )
         q1=self.division(x, self.Gorners_power(b, self.transform(hex(k-1)[2::] ) ) )
 
         q2=self.multiplication_simple(mu, q1)
@@ -471,6 +548,8 @@ class Big_Int(object):
         q3=self.division(q2, self.Gorners_power(b, self.transform(hex(k+1)[2::]) ) )
 
         q3n=self.multiplication_simple(q3, n)
+
+        # print(x, q3n, 'to sub')
         
         r=self.substraction(x, q3n)
 
@@ -489,23 +568,30 @@ class Big_Int(object):
 
         r=r[:zero_index+1]
 
-        print(r)
+        #print(r)
 
         return r
 
 
 
-    def Gorners_power(self,a ,n ):
+    def Gorners_power_mod_t(self,a ,n,t  ):
+       
         result=[1]
 
         while(self.re_tranform(n)!='0'):
 
             if (self.bit_and(n)):
                 result=self.multiplication_simple(result, a)
-                n=self.substraction(n, [1])
-            else:
-                a=self.multiplication_simple(a, a)
-                n=self.shift_right(n, 1)
+                result=self.Barretts_module(result, t)
+                
+
+            n=self.shift_right(n, 1)
+            if (self.re_tranform(n)=='0'):
+                break
+            a=self.multiplication_simple(a, a)
+            a=self.Barretts_module(a, t)
+
+
 
 
         zero_index=0
@@ -516,23 +602,45 @@ class Big_Int(object):
 
         result=result[:zero_index+1]
 
+        # result=self.Barretts_module(result, t)
+
         return result 
 
-    """
-        int binpow (int a, int n) {
-            int res = 1;
-            while (n)
-                if (n & 1) {
-                    res *= a;
-                    --n;
-                }
-                else {
-                    a *= a;
-                    n >>= 1;
-                }
-            return res;
-        }
-    """
+
+    def Gorners_power(self,a ,n ):
+       
+        result=[1]
+
+        r=0
+        while(self.re_tranform(n)!='0'):
+            r+=1
+
+            if (self.bit_and(n)):
+                result=self.multiplication_simple(result, a)
+                # n=self.substraction(n, [1])   old
+            # else:
+            #     a=self.multiplication_simple(a, a)
+            #     n=self.shift_right(n, 1) old
+
+            n=self.shift_right(n, 1)
+            if (self.re_tranform(n)=='0'):
+                break
+            a=self.multiplication_simple(a, a)
+
+
+
+
+        zero_index=0
+        for e in range(len(result)-1,-1,-1):
+            if result[e] != 0:
+                zero_index = e
+                break
+
+        result=result[:zero_index+1]
+
+        # print (r,'iterations')
+
+        return result 
 
 
     def substraction_stright(self,arr1,arr2):
